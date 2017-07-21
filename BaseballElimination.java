@@ -68,7 +68,6 @@ public class BaseballElimination{
 
 	}
 	public BaseballElimination(Scanner s){ // for now just look at one team, arbitrarily choose team 5
-		int teamCheckIndex = 3;
 		// proccess input
 		System.out.printf("Reading graph\n");
 		int numTeams = s.nextInt();
@@ -92,66 +91,84 @@ public class BaseballElimination{
 
 		// create the network (source + matchup vertices + team vertices + sink)
 		int numVertices = (numTeamsInNetwork * (numTeamsInNetwork - 1) / 2) + numTeams + 2;
-		FlowNetwork network = new FlowNetwork(numVertices);
-		int currentVertex = 1; // we will add our vertices based off this number
+		for (int teamCheckIndex = 0; teamCheckIndex < numTeams; teamCheckIndex++){
+			FlowNetwork network = new FlowNetwork(numVertices);
+			int currentVertex = 1; // we will add our vertices based off this number
 
 
-		// add matchup vertices connecting to the source
-		int subtractOne = 0;
-		for (int i = 0; i < numTeams; i++){
-			if (i == teamCheckIndex) {
-				subtractOne = 1;
-				continue;
-			}
-			for (int j = 0; j < i; j++){
-				if (j == teamCheckIndex){
+			// add matchup vertices connecting to the source
+			int subtractOneI = 0;
+			int subtractOneJ = 0;
+			for (int i = 0; i < numTeams; i++){
+				if (i == teamCheckIndex) {
+					subtractOneI = 1;
 					continue;
 				}
-				// capacity for this edge is the number of games between the two teams
-				FlowEdge newEdge = new FlowEdge(0, currentVertex + numTeamsInNetwork, gamesRemaining[i][j]);
-				System.out.printf("%d\n", subtractOne);
+				for (int j = 0; j < i; j++){
+					if (j == teamCheckIndex){
+						subtractOneJ = 1;
+						continue;
+					}
+					// capacity for this edge is the number of games between the two teams
+					FlowEdge newEdge = new FlowEdge(0, currentVertex + numTeamsInNetwork, gamesRemaining[i][j]);
+					network.addEdge(newEdge);
+
+					// connect to the team vertices
+					FlowEdge teamOneEdge = new FlowEdge(currentVertex + numTeamsInNetwork, i + 1 - subtractOneI, Double.POSITIVE_INFINITY);
+					FlowEdge teamTwoEdge = new FlowEdge(currentVertex + numTeamsInNetwork, j + 1 - subtractOneJ, Double.POSITIVE_INFINITY);
+
+					network.addEdge(teamOneEdge);
+					network.addEdge(teamTwoEdge);
+
+					currentVertex++;
+				}
+
+			}
+
+			// calculate how many games remaining team has
+			int teamCheckWins = teamData[teamCheckIndex].wins;
+			int teamCheckRemainingGames = 0;
+			for (int i = 0; i < numTeams; i++){
+				teamCheckRemainingGames += gamesRemaining[teamCheckIndex][i];
+			}
+			System.out.printf("Team has %d wins and %d games left\n", teamCheckWins, teamCheckRemainingGames);
+
+			// attach team vertices to the sink
+			for (int i = 0; i < numTeams; i++){
+				if (i == teamCheckIndex){
+					continue;
+				}
+				int capacity = teamCheckRemainingGames + teamCheckWins - teamData[i].wins;
+				if (capacity < 0){
+					capacity = 0;
+					if (!eliminated.contains(teamData[teamCheckIndex].teamName)){
+						eliminated.add(teamData[teamCheckIndex].teamName);
+					}
+				}
+				FlowEdge newEdge = new FlowEdge(i+1, currentVertex + numTeams, capacity);
 				network.addEdge(newEdge);
-
-				// connect to the team vertices
-				FlowEdge teamOneEdge = new FlowEdge(currentVertex + numTeamsInNetwork, i + 1 - subtractOne, Double.POSITIVE_INFINITY);
-				FlowEdge teamTwoEdge = new FlowEdge(currentVertex + numTeamsInNetwork, j + 1 - subtractOne, Double.POSITIVE_INFINITY);
-
-				network.addEdge(teamOneEdge);
-				network.addEdge(teamTwoEdge);
-
-				currentVertex++;
 			}
 
-		}
-		System.out.printf("^^^^^^^^^^^^^^^^^^^^^^^^\n%s", network.toString());
+			// do ford-fulkerson
+			FordFulkerson maxflow = new FordFulkerson(network, 0, currentVertex + numTeams);
 
+			System.out.printf("%s", network.toString());
 
-		System.out.printf("\n%d\n", teamCheckIndex);
-		// calculate how many games remaining team has
-		int teamCheckWins = teamData[teamCheckIndex].wins;
-		int teamCheckRemainingGames = 0;
-		for (int i = 0; i < numTeamsInNetwork; i++){
-			teamCheckRemainingGames += gamesRemaining[teamCheckIndex][i];
-		}
-		System.out.printf("Team has %d wins and %d games left\n", teamCheckWins, teamCheckRemainingGames);
+			Iterator<FlowEdge> edgeList = network.adj(0).iterator();
 
-		// attach team vertices to the sink
-		for (int i = 0; i < numTeamsInNetwork; i++){
-			int capacity = teamCheckRemainingGames + teamCheckWins - teamData[i].wins;
-			if (capacity < 0){ // TODO: not sure about this part
-				capacity = 0;
+			while (edgeList.hasNext()){
+				FlowEdge e = edgeList.next();
+				if (e.capacity() != e.flow()){
+					//System.out.printf("%s\n", teamData[teamCheckIndex].teamName);
+					if (!eliminated.contains(teamData[teamCheckIndex].teamName)){
+						eliminated.add(teamData[teamCheckIndex].teamName);
+					}
+				}
 			}
-			System.out.printf("CAPACITY: %d\n", currentVertex);
-			FlowEdge newEdge = new FlowEdge(i+1, currentVertex + numTeams, capacity);
-			network.addEdge(newEdge);
+
+			System.out.printf("%s", Arrays.toString(eliminated.toArray()));
+
 		}
-		System.out.printf("@@@@@@@@@@@@@@@@\n%s", network.toString());
-
-
-		// do ford-fulkerson
-		FordFulkerson maxflow = new FordFulkerson(network, 0, currentVertex + numTeams);
-
-		System.out.printf("!!!!!!!!!!!!!!!!!!!\n%s", network.toString());
 	}
 		
 	/* main()
