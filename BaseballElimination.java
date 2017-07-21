@@ -78,7 +78,8 @@ public class BaseballElimination{
 		int teamsProcessed = 0;
 		for (int i = 0; i < numTeams && s.hasNextLine(); i++){
 			String currentLine = s.nextLine();
-			String[] lineArray = currentLine.split(" ");
+			currentLine = currentLine.trim();
+			String[] lineArray = currentLine.split("\\s+");
 
 			teamData[i] = new TeamData(lineArray[0], lineArray[1], lineArray[2]);
 
@@ -90,7 +91,7 @@ public class BaseballElimination{
 		int numTeamsInNetwork = numTeams - 1;
 
 		// create the network (source + matchup vertices + team vertices + sink)
-		int numVertices = (numTeamsInNetwork * (numTeamsInNetwork - 1) / 2) + numTeams + 2;
+		int numVertices = (numTeamsInNetwork * (numTeamsInNetwork - 1) / 2) + numTeams + 2 + 1;
 		for (int teamCheckIndex = 0; teamCheckIndex < numTeams; teamCheckIndex++){
 			FlowNetwork network = new FlowNetwork(numVertices);
 			int currentVertex = 1; // we will add our vertices based off this number
@@ -98,8 +99,8 @@ public class BaseballElimination{
 
 			// add matchup vertices connecting to the source
 			int subtractOneI = 0;
-			int subtractOneJ = 0;
 			for (int i = 0; i < numTeams; i++){
+				int subtractOneJ = 0;
 				if (i == teamCheckIndex) {
 					subtractOneI = 1;
 					continue;
@@ -110,12 +111,12 @@ public class BaseballElimination{
 						continue;
 					}
 					// capacity for this edge is the number of games between the two teams
-					FlowEdge newEdge = new FlowEdge(0, currentVertex + numTeamsInNetwork, gamesRemaining[i][j]);
+					FlowEdge newEdge = new FlowEdge(0, currentVertex + numTeamsInNetwork + 1, gamesRemaining[i][j]);
 					network.addEdge(newEdge);
 
 					// connect to the team vertices
-					FlowEdge teamOneEdge = new FlowEdge(currentVertex + numTeamsInNetwork, i + 1 - subtractOneI, Double.POSITIVE_INFINITY);
-					FlowEdge teamTwoEdge = new FlowEdge(currentVertex + numTeamsInNetwork, j + 1 - subtractOneJ, Double.POSITIVE_INFINITY);
+					FlowEdge teamOneEdge = new FlowEdge(currentVertex + numTeamsInNetwork + 1, i + 1, Double.POSITIVE_INFINITY);
+					FlowEdge teamTwoEdge = new FlowEdge(currentVertex + numTeamsInNetwork + 1, j + 1, Double.POSITIVE_INFINITY);
 
 					network.addEdge(teamOneEdge);
 					network.addEdge(teamTwoEdge);
@@ -141,6 +142,7 @@ public class BaseballElimination{
 				int capacity = teamCheckRemainingGames + teamCheckWins - teamData[i].wins;
 				if (capacity < 0){
 					capacity = 0;
+					System.out.printf("WE IN HERE %s", teamData[teamCheckIndex].teamName);
 					if (!eliminated.contains(teamData[teamCheckIndex].teamName)){
 						eliminated.add(teamData[teamCheckIndex].teamName);
 					}
@@ -158,7 +160,7 @@ public class BaseballElimination{
 
 			while (edgeList.hasNext()){
 				FlowEdge e = edgeList.next();
-				if (e.capacity() != e.flow()){
+				if (e.capacity() != e.flow() && e.from() == 0){
 					//System.out.printf("%s\n", teamData[teamCheckIndex].teamName);
 					if (!eliminated.contains(teamData[teamCheckIndex].teamName)){
 						eliminated.add(teamData[teamCheckIndex].teamName);
