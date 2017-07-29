@@ -69,7 +69,6 @@ public class BaseballElimination{
 	}
 	public BaseballElimination(Scanner s){ // for now just look at one team, arbitrarily choose team 5
 		// proccess input
-		System.out.printf("Reading graph\n");
 		int numTeams = s.nextInt();
 		s.nextLine();
 
@@ -132,7 +131,6 @@ public class BaseballElimination{
 			for (int i = 0; i < numTeams; i++){
 				teamCheckRemainingGames += gamesRemaining[teamCheckIndex][i];
 			}
-			System.out.printf("Team has %d wins and %d games left\n", teamCheckWins, teamCheckRemainingGames);
 
 			// attach team vertices to the sink
 			for (int i = 0; i < numTeams; i++){
@@ -142,7 +140,6 @@ public class BaseballElimination{
 				int capacity = teamCheckRemainingGames + teamCheckWins - teamData[i].wins;
 				if (capacity < 0){
 					capacity = 0;
-					System.out.printf("WE IN HERE %s", teamData[teamCheckIndex].teamName);
 					if (!eliminated.contains(teamData[teamCheckIndex].teamName)){
 						eliminated.add(teamData[teamCheckIndex].teamName);
 					}
@@ -153,8 +150,6 @@ public class BaseballElimination{
 
 			// do ford-fulkerson
 			FordFulkerson maxflow = new FordFulkerson(network, 0, currentVertex + numTeams);
-
-			System.out.printf("%s", network.toString());
 
 			Iterator<FlowEdge> edgeList = network.adj(0).iterator();
 
@@ -167,8 +162,6 @@ public class BaseballElimination{
 					}
 				}
 			}
-
-			System.out.printf("%s", Arrays.toString(eliminated.toArray()));
 
 		}
 	}
